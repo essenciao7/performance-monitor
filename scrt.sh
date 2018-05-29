@@ -1,24 +1,9 @@
 #!/bin/bash
 
-# Create timestamp for apending filenames
-# TIMESTAMP=$(date +"%Y%m%d")
 TIMESTAMP=$(date +"%b %d %H:%M:%S")
 
-#!/bin/bash
-
-# SSH接続情報、本番環境
-SSH_USER=root
-SSH_PASS=default
-SSH_HOSTNAMES=('AFTVP03' 'AFTVP04')
-SSH_HOSTS=('10.128.1.145' '10.128.1.145')
-
-# ログの保存場所
-LOG_PATH=~/Desktop/var/log
-
-# CPUやメモリ利用率を取得するためのリモートコマンド
-REMOTE_CMD_CPU="tmsh show sys cpu"
-REMOTE_CMD_MEMORY="tmsh show sys memory"
-
+# 設定ファイルを読み込み
+source /Users/j367557/Documents/workspace/apm/vpnrsc.conf
 
 # 後述のSSH_ASKPASSで設定したプログラム(本ファイル自身)が返す内容
 if [ -n "$PASSWORD" ]; then
@@ -40,21 +25,21 @@ for i in "${!SSH_HOSTS[@]}"; do
   MEM_USAGE=($(setsid -f ssh ${SSH_USER}@${SSH_HOSTS[$i]} ${REMOTE_CMD_MEMORY} | awk 'NR==6 {print $4}'))
 
 # CPUログレベルの設定
-  if [ $CPU_USAGE -ge "80" ]; then
-    CPU_LOG_LEVEL=alert
-  elif [ $CPU_USAGE -lt "80" ] && [ $CPU_USAGE -ge "50" ]; then
-    CPU_LOG_LEVEL=warning
+  if [ $CPU_USAGE -lt $CPU_LOG_LEVEL_M ]; then
+    CPU_LOG_LEVEL=N
+  elif [ $CPU_USAGE -ge $CPU_LOG_LEVEL_M ] && [$CPU_USAGE -lt $CPU_LOG_LEVEL_C ]; then
+    CPU_LOG_LEVEL=M
   else
-    CPU_LOG_LEVEL=info
+    CPU_LOG_LEVEL=C
   fi
 
 # メモリログレベルの設定
-  if [ $MEM_USAGE -ge "80" ]; then
-    MEM_LOG_LEVEL=alert
-  elif [ $MEM_USAGE -lt "80" ] && [ $MEM_USAGE -ge "50" ]; then
-    MEM_LOG_LEVEL=warning
+  if [ $MEM_USAGE -lt $MEM_LOG_LEVEL_M ]; then
+    MEM_LOG_LEVEL=N
+  elif [ $MEM_USAGE -ge $MEM_LOG_LEVEL_M ] && [ MEM_USAGE -lt $MEM_LOG_LEVEL_C ]; then
+    MEM_LOG_LEVEL=M
   else
-    MEM_LOG_LEVEL=info
+    MEM_LOG_LEVEL=C
   fi
 
   echo "$TIMESTAMP ${SSH_HOSTNAMES[$i]} $CPU_LOG_LEVEL cpumon: CPU utilization reached utilization $CPU_USAGE%." >> ${LOG_PATH}/vpn-cpu
